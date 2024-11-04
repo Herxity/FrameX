@@ -3,6 +3,7 @@ import pandas as pd
 import torch
 import torchvision
 from torchvision import transforms
+from torchvision.transforms import v2
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import cv2
@@ -16,7 +17,8 @@ class ImageDataset(Dataset):
         self.img_labels = labels
         self.imgs = inputs
         self.transform = transforms.Compose([
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            v2.RandomHorizontalFlip(p=0.5),
         ])
         self.target_transform = transforms.Compose([
             transforms.ToTensor()
@@ -70,7 +72,7 @@ class SRCNN(nn.Module):
     def __init__(self):
         super(SRCNN, self).__init__()
         #Upsampling layer
-        self.upsample = nn.Upsample(scale_factor=4, mode='bicubic', align_corners=False)
+        self.upsample = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=False)
         # Patch extraction and representation
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, padding=4)
         # Non-linear mapping
@@ -88,8 +90,57 @@ class SRCNN(nn.Module):
         x = self.conv3(x)
         return x
 
+class ResidualBlock(nn.Module):
+    def __init__(self, n_feats):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(n_feats, n_feats, kernel_size=3, padding=1)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(n_feats, n_feats, kernel_size=3, padding=1)
+        self.res_scale = 0.1  # Residual scaling factor
+
+    def forward(self, x):
+        residual = self.conv1(x)
+        residual = self.relu(residual)
+        residual = self.conv2(residual)
+        return x + self.res_scale * residual
+
+class EDSR(nn.Module):
+    def __init__(self, n_resblocks=8, n_feats=64, scale_factor=4):
+        super(EDSR, self).__init__()
+        # Initial feature extraction
+        self.conv1 = nn.Conv2d(3, n_feats, kernel_size=3, padding=1)
+        
+        # Residual blocks
+        self.res_blocks = nn.Sequential(*[ResidualBlock(n_feats) for _ in range(n_resblocks)])
+        
+        # Intermediate convolution
+        self.conv2 = nn.Conv2d(n_feats, n_feats, kernel_size=3, padding=1)
+        
+        # Upsampling layer
+        self.upsample = nn.Sequential(
+            nn.Conv2d(n_feats, n_feats * (scale_factor ** 2), kernel_size=3, padding=1),
+            nn.PixelShuffle(scale_factor)
+        )
+        
+        # Final output layer
+        self.conv3 = nn.Conv2d(n_feats, 3, kernel_size=3, padding=1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        residual = x
+        
+        # Pass through residual blocks
+        x = self.res_blocks(x)
+        x = self.conv2(x)
+        x += residual  # Skip connection from the initial feature extraction
+        
+        # Upsample to high resolution
+        x = self.upsample(x)
+        x = self.conv3(x)
+        return x
+
 #initialize the model, loss function, and optimizer
-model = SRCNN()
+model = EDSR()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
@@ -98,7 +149,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 
 #training loop
-num_epochs = 10
+num_epochs = 30
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
