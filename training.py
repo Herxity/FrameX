@@ -12,6 +12,9 @@ import torch.nn as nn
 import torch.optim as optim
 
 
+SCALE_FACTOR = .25
+
+
 class ImageDataset(Dataset):
     def __init__(self, inputs, labels, transform=None, target_transform=None):
         self.img_labels = labels
@@ -43,12 +46,11 @@ inputs = []
 for dirname, _, filenames in os.walk(train):
     for filename in filenames:
         label = cv2.imread(dirname +'/'+ filename)
-        input = cv2.resize(label, (0,0), fx=0.25, fy=0.25) 
+        input = cv2.resize(label, (0,0), fx=SCALE_FACTOR, fy=SCALE_FACTOR) 
         labels.append(label)
         inputs.append(input)
-        
 train_dataset = ImageDataset(inputs,labels)    
-        
+       
 test = "./labels/MineCraft-RT_1280x720_v12/MineCraft-RT_1280x720_v12"
 print("Loading Test Data")
 labels = []
@@ -56,15 +58,14 @@ inputs = []
 for dirname, _, filenames in os.walk(test + '/images'):
     for filename in filenames:
         label = cv2.imread(dirname +'/'+ filename)
-        input = cv2.resize(label, (0,0), fx=0.25, fy=0.25) 
+        input = cv2.resize(label, (0,0), fx=SCALE_FACTOR, fy=SCALE_FACTOR) 
         labels.append(label)
         inputs.append(input)
 test_dataset = ImageDataset(inputs,labels)    
-
 print(train_dataset.__getitem__(1)[0].shape,train_dataset.__getitem__(1)[1].shape)
 
-train_dataloader = DataLoader(train_dataset, batch_size=4,shuffle=True, num_workers=0)
-test_dataloader = DataLoader(train_dataset, batch_size=4,shuffle=True, num_workers=0)
+train_dataloader = DataLoader(train_dataset, batch_size=32,shuffle=True, num_workers=0)
+test_dataloader = DataLoader(train_dataset, batch_size=32,shuffle=True, num_workers=0)
 
 ###THIS IS UP TO THE POINT I ACTUALLY VERIFIED THINGS WORK
 

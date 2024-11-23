@@ -4,39 +4,61 @@ import torch.nn.functional as F
 from torchvision.transforms import ToTensor, ToPILImage
 from PIL import Image
 import cv2
-
-class SRCNN(nn.Module):
-    def __init__(self):
-        super(SRCNN, self).__init__()
+class EDSR(nn.Module):
+    def __init__(self, n_resblocks=8, n_feats=64, scale_factor=4):
+        super(EDSR, self).__init__()
+        # Initial feature extraction
+        self.conv1 = nn.Conv2d(3, n_feats, kernel_size=3, padding=1)
+        
+        # Residual blocks
+        self.res_blocks = nn.Sequential(*[ResidualBlock(n_feats) for _ in range(n_resblocks)])
+        
+        # Intermediate convolution
+        self.conv2 = nn.Conv2d(n_feats, n_feats, kernel_size=3, padding=1)
+        
         # Upsampling layer
-        self.upsample = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=False)
-        # Patch extraction and representation
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, padding=4)
-        # Non-linear mapping
-        self.conv2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=1)
-        # Reconstruction
-        self.conv3 = nn.Conv2d(in_channels=32, out_channels=3, kernel_size=5, padding=2)
-        # Activation function (ReLU)
-        self.relu = nn.ReLU()
+        self.upsample = nn.Sequential(
+            nn.Conv2d(n_feats, n_feats * (scale_factor ** 2), kernel_size=3, padding=1),
+            nn.PixelShuffle(scale_factor)
+        )
+        
+        # Final output layer
+        self.conv3 = nn.Conv2d(n_feats, 3, kernel_size=3, padding=1)
 
     def forward(self, x):
-        output_image = x.squeeze(0).cpu()
-        output_image = ToPILImage()(output_image)
-        output_image.save("./input.jpg")
-        x = self.upsample(x)  # Upsample before feature extraction
-        output_image = x.squeeze(0).cpu()
-        output_image = ToPILImage()(output_image)
-        output_image.save("./interm.jpg")
-        x = self.relu(self.conv1(x))
-        x = self.relu(self.conv2(x))
+        x = self.conv1(x)
+        residual = x
+        
+        # Pass through residual blocks
+        x = self.res_blocks(x)
+        x = self.conv2(x)
+        x += residual  # Skip connection from the initial feature extraction
+        
+        # Upsample to high resolution
+        x = self.upsample(x)
         x = self.conv3(x)
         return x
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, n_feats):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(n_feats, n_feats, kernel_size=3, padding=1)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(n_feats, n_feats, kernel_size=3, padding=1)
+        self.res_scale = 0.1  # Residual scaling factor
+
+    def forward(self, x):
+        residual = self.conv1(x)
+        residual = self.relu(residual)
+        residual = self.conv2(residual)
+        return x + self.res_scale * residual
 
 
 class SRCNNWrapper:
     def __init__(self, model_path=None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = SRCNN().to(self.device)
+        self.model = EDSR().to(self.device)
         if model_path:
             self.load_model(model_path)
         self.model.eval()
