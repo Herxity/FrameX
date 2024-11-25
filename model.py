@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 from torchvision.transforms import ToTensor, ToPILImage
 from PIL import Image
 import cv2
+
 class EDSR(nn.Module):
-    def __init__(self, n_resblocks=8, n_feats=64, scale_factor=4):
+    def __init__(self, n_resblocks=8, n_feats=128, scale_factor=2):
         super(EDSR, self).__init__()
         # Initial feature extraction
         self.conv1 = nn.Conv2d(3, n_feats, kernel_size=3, padding=1)
@@ -39,7 +41,6 @@ class EDSR(nn.Module):
         x = self.conv3(x)
         return x
 
-
 class ResidualBlock(nn.Module):
     def __init__(self, n_feats):
         super(ResidualBlock, self).__init__()
@@ -54,7 +55,6 @@ class ResidualBlock(nn.Module):
         residual = self.conv2(residual)
         return x + self.res_scale * residual
 
-
 class SRCNNWrapper:
     def __init__(self, model_path=None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -62,6 +62,9 @@ class SRCNNWrapper:
         if model_path:
             self.load_model(model_path)
         self.model.eval()
+        self.transform = transforms.Compose([
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),  # Normalize images
+        ])
 
     def load_model(self, model_path):
         """Load pre-trained model weights."""
@@ -71,6 +74,8 @@ class SRCNNWrapper:
     def preprocess_image(self, image):
         """Preprocess the image for SRCNN."""
         image = ToTensor()(image).unsqueeze(0).to(self.device)  # Add batch dimension
+        image = self.transform(image)
+        
         return image
 
     def enhance_image(self, image_path):
@@ -99,13 +104,14 @@ class SRCNNWrapper:
 
 # Example usage
 if __name__ == "__main__":
-    srcnn_wrapper = SRCNNWrapper(model_path="./srcnn_model.pth")  # Load a model if available
-    input_path = "./dataset/MineCraft-RT_1280x720_v14/MineCraft-RT_1280x720_v14/images/00000.jpg"
+    srcnn_wrapper = SRCNNWrapper(model_path="./srcnn_model-10-0.0252.pth")  # Load a model if available
+    input_path = "./dataset/Test/00001.jpg"
     output_path = "./out.jpg"
     
     img = cv2.imread(input_path)
-    img = cv2.resize(img, (0,0), fx=0.25, fy=0.25) 
+    img = cv2.resize(img, (0,0), fx=0.5, fy=0.5) 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
 
     # Enhance image
     enhanced_image = srcnn_wrapper.enhance_image(img)
