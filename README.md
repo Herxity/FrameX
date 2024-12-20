@@ -90,18 +90,11 @@ dataset/
 
 Images should be in `.jpg` format. The script automatically splits the dataset into training and testing sets.
 
-## Models
+## Model
 
-### 1. SRCNN (Super-Resolution Convolutional Neural Network)
+### EDSR (Enhanced Deep Residual Networks)
 
-- A lightweight model for basic super-resolution tasks.
-- Layers:
-  - Upsampling using bilinear interpolation.
-  - Convolutional layers for feature extraction and reconstruction.
-
-### 2. EDSR (Enhanced Deep Residual Networks)
-
-- A deeper and more robust architecture leveraging residual blocks.
+- A deep and robust architecture leveraging residual blocks.
 - Features:
   - Residual scaling for stability.
   - Adjustable number of residual blocks and features.
