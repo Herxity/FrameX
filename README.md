@@ -2,9 +2,13 @@
 
 ## Overview
 
-FrameX is a deep learning-based project designed to enhance low-resolution images into high-resolution ones using advanced image super-resolution techniques. This project leverages PyTorch, torchvision, and other Python libraries to create and train models for upscaling images. The project features a custom dataset pipeline, SRCNN and EDSR model implementations, and supports real-time training and evaluation on GPUs.
+FrameX is a deep learning-based project designed to enhance low-resolution images into high-resolution ones using advanced image super-resolution techniques. This project leverages PyTorch, torchvision, and other Python libraries to create and train models for upscaling images. The project features a custom dataset pipeline, EDSR model implementation, and supports training and evaluation on GPUs.
 
 For the purpose of this project, we worked solely with a dataset of 4k Minecraft Images, linked in the download.sh file.
+
+# Hardware Used
+
+This was trained on !NERSC PERLMUTTER](https://docs.nersc.gov/systems/perlmutter/architecture/) using the NVIDIA A100 platform.
 
 ### Examples
 Here are example images processed by FrameX:
