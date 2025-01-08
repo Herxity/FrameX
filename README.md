@@ -8,7 +8,7 @@ For the purpose of this project, we worked solely with a dataset of 4k Minecraft
 
 # Hardware Used
 
-This was trained on !NERSC PERLMUTTER](https://docs.nersc.gov/systems/perlmutter/architecture/) using the NVIDIA A100 platform.
+This was trained on [NERSC PERLMUTTER](https://docs.nersc.gov/systems/perlmutter/architecture/) using the NVIDIA A100 platform.
 
 ### Examples
 Here are example images processed by FrameX:
