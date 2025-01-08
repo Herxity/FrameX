@@ -6,10 +6,10 @@ FrameX is a deep learning-based project designed to enhance low-resolution image
 
 For the purpose of this project, we worked solely with a dataset of 4k Minecraft Images, linked in the download.sh file.
 
-###Hardware Used
+### Hardware Used
 This was trained on [NERSC PERLMUTTER](https://docs.nersc.gov/systems/perlmutter/architecture/) using the NVIDIA A100 platform.
 
-###Training
+### Training
 We found that training for 30 Epochs was sufficient.
 
 ### Examples
